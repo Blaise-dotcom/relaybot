@@ -1,4 +1,6 @@
 import logging
+import threading
+from http.server import BaseHTTPRequestHandler, HTTPServer
 import os
 from telegram import Update
 from telegram.ext import (
@@ -238,9 +240,30 @@ def main():
         handle_group_reply,
     ))
 
+    # Lancer le serveur HTTP en arrière-plan (obligatoire pour Render Web Service)
+    t = threading.Thread(target=run_health_server, daemon=True)
+    t.start()
+
     logger.info("Bot démarré — en attente de messages...")
     app.run_polling()
 
 
 if __name__ == "__main__":
     main()
+
+# ──────────────────────────────────────────────────────────────
+#  SERVEUR HTTP  –  requis pour Render Web Service (plan gratuit)
+# ──────────────────────────────────────────────────────────────
+class HealthHandler(BaseHTTPRequestHandler):
+    def do_GET(self):
+        self.send_response(200)
+        self.end_headers()
+        self.wfile.write(b"Bot OK")
+    def log_message(self, *args):
+        pass  # silence les logs HTTP
+
+def run_health_server():
+    port = int(os.environ.get("PORT", 8080))
+    server = HTTPServer(("0.0.0.0", port), HealthHandler)
+    logger.info("Health server sur port %s", port)
+    server.serve_forever()
