@@ -1,3 +1,4 @@
+import asyncio
 import logging
 import os
 import threading
@@ -172,10 +173,10 @@ async def handle_group_reply(update: Update, context: ContextTypes.DEFAULT_TYPE)
 
 
 # ──────────────────────────────────────────────────────────────
-#  MAIN
+#  MAIN  –  async pour compatibilité Python 3.10+
 # ──────────────────────────────────────────────────────────────
-def main():
-    # Lancer le serveur HTTP en arrière-plan AVANT le bot
+async def main():
+    # Serveur HTTP dans un thread séparé
     t = threading.Thread(target=run_health_server, daemon=True)
     t.start()
 
@@ -192,8 +193,14 @@ def main():
     ))
 
     logger.info("Bot démarré — en attente de messages...")
-    app.run_polling()
+
+    async with app:
+        await app.initialize()
+        await app.start()
+        await app.updater.start_polling()
+        # Tourner indéfiniment
+        await asyncio.Event().wait()
 
 
 if __name__ == "__main__":
-    main()
+    asyncio.run(main())
