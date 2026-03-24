@@ -1,0 +1,11 @@
+services:
+  - type: worker          # Background Worker — pas de port HTTP
+    name: relay-bot
+    runtime: python
+    buildCommand: pip install -r requirements.txt
+    startCommand: python relay_bot.py
+    envVars:
+      - key: BOT_TOKEN
+        sync: false       # tu le saisiras manuellement dans le dashboard
+      - key: GROUP_ID
+        sync: false
