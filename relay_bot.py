@@ -5799,4 +5799,39 @@ def main():
 
 
 if __name__ == "__main__":
-    main()
+    import time
+    import threading
+    from http.server import HTTPServer, BaseHTTPRequestHandler
+
+    class HealthHandler(BaseHTTPRequestHandler):
+        def do_GET(self):
+            self.send_response(200)
+            self.end_headers()
+            self.wfile.write(b"OK")
+        def log_message(self, *args):
+            pass
+
+    port = int(os.environ.get("PORT", 8080))
+    server = HTTPServer(("0.0.0.0", port), HealthHandler)
+    threading.Thread(target=server.serve_forever, daemon=True).start()
+    logger.info(f"🌐 Health check HTTP sur port {port}")
+    import time
+    MAX_RETRIES = 10
+    retry = 0
+    while True:
+        try:
+            logger.info(f"🔄 Démarrage du bot (tentative {retry + 1})...")
+            main()
+        except Exception as e:
+            retry += 1
+            wait = min(30 * retry, 300)
+            logger.error(f"💥 Le bot a crashé : {e}")
+            if retry >= MAX_RETRIES:
+                logger.critical("❌ Trop de crashs. Arrêt définitif.")
+                break
+            logger.info(f"⏳ Redémarrage dans {wait}s... (tentative {retry}/{MAX_RETRIES})")
+            time.sleep(wait)
+        else:
+            logger.warning("⚠️ Bot arrêté proprement. Redémarrage dans 10s...")
+            time.sleep(10)
+            retry = 0
